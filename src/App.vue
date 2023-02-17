@@ -3,76 +3,61 @@ import {
   darkTheme,
   NConfigProvider,
   NGradientText,
-  NSpace,
   useOsTheme,
 } from "naive-ui";
-import { computed, onMounted, ref, watch } from "vue";
-import BinarySwitch from "./components/BinarySwitch.vue";
+import { computed, ref, watch } from "vue";
+import SwitchPanel from "./components/SwitchPanel.vue";
 
+// Make sure Naive UI switches darkmode
 const osThemeRef = useOsTheme();
 const theme = computed(() => (osThemeRef.value === "dark" ? darkTheme : null));
 
-type binaryNumbers = 128 | 64 | 32 | 16 | 8 | 4 | 2 | 1;
-const keys = ["a", "s", "d", "f", "h", "j", "k", "l"];
-
-const binary: binaryNumbers[] = [128, 64, 32, 16, 8, 4, 2, 1];
-
-const answer = ref([false, false, false, false, false, false, false, false]);
+// Set up the refs
 const currentValue = ref(0);
+const displayValue = ref("00000000");
 const points = ref(0);
-const question = ref(Math.floor(Math.random() * 256));
+const question = ref(1);
 
-const wrapper = ref<HTMLElement | null>(null);
-
-const focusWrapper = () => {
-  wrapper.value?.focus();
+// Methods
+const newBinary = (complexity: number, randomize: boolean): void => {
+  const random = Math.floor(Math.random() * 255) + 1;
+  const inBinary = random.toString(2);
+  if (
+    complexity >= 6 ||
+    checkComplexity(inBinary) === complexity ||
+    randomize
+  ) {
+    question.value = random;
+  } else {
+    return newBinary(complexity, randomize);
+  }
 };
 
-onMounted(() => wrapper.value?.focus());
+const checkComplexity = (binaryArr: string): number => {
+  const length = binaryArr.split("").filter((val) => val === "1").length; // between 0 and 8
+  return 7 - Math.abs(6 - length); // Between 1 and 7
+};
 
-const reset = () => {
-  question.value = Math.floor(Math.random() * 256);
+const newRound = () => {
+  newBinary(Math.round(points.value / 2) + 1, Math.random() >= 0.5);
   points.value++;
-  answer.value = [false, false, false, false, false, false, false, false];
   currentValue.value = 0;
 };
 
-const updateAnswer = (index: number, value: boolean) => {
-  answer.value.splice(index, 1, value);
-  currentValue.value = answer.value.reduce(
-    (acc: number, curr: boolean, index: number) => {
-      if (curr) {
-        return acc + binary[index];
-      } else {
-        return acc + 0;
-      }
-    },
-    0
-  );
+const updateAnswer = (value: any) => {
+  currentValue.value = value;
+  displayValue.value = currentValue.value.toString(2).padStart(8, "0");
 };
 
 watch(currentValue, () => {
   if (currentValue.value === question.value) {
-    reset();
+    newRound();
   }
 });
-
-const toggleSwitch = (key: any) => {
-  const index = keys.indexOf(key.key);
-  if (index > -1) {
-    updateAnswer(index, !answer.value[index]);
-  }
-};
 </script>
 <template>
   <n-config-provider :theme="theme">
-    <div
-      class="wrapper"
-      @keypress="toggleSwitch"
-      ref="wrapper"
-      tabindex="0"
-      @focusout="focusWrapper"
-    >
+    <div class="wrapper">
       <h1>
         <n-gradient-text :size="48" type="success"> Vuenary </n-gradient-text>
       </h1>
@@ -80,16 +65,10 @@ const toggleSwitch = (key: any) => {
       <p>You have {{ points }} points</p>
       <br />
 
-      <n-space :size="16" :align="'center'">
-        <BinarySwitch
-          v-for="(binaryNr, index) in binary"
-          :key="binaryNr.toString()"
-          :checked="answer[index]"
-          :label="binaryNr.toString()"
-          :keySwitch="keys[index]"
-          @checkbox="(value) => updateAnswer(index, value)"
-        />
-      </n-space></div
+      <p style="font-family: monospace; font-size: 20px">
+        {{ displayValue }}
+      </p>
+      <SwitchPanel @answerUpdate="updateAnswer" :question="question" /></div
   ></n-config-provider>
 </template>
 <style>
@@ -100,19 +79,5 @@ const toggleSwitch = (key: any) => {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-}
-
-.wrapper:focus {
-  outline: none;
-  border: none;
-  box-shadow: none;
-}
-
-.switches {
-  display: flex;
-}
-
-.n-base-close {
-  z-index: 999;
 }
 </style>

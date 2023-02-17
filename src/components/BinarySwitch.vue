@@ -27,12 +27,18 @@ const updateCheck = (value: boolean) => {
 </script>
 
 <template>
-  <n-card
-    :title="props.label"
-    header-style="text-align:center;font-family:monospace;padding:.5rem"
-    @click="updateCheck(!value)"
-    class="card"
-  >
+  <n-card @click="updateCheck(!value)" class="card">
+    <p
+      style="
+        text-align: center;
+        font-family: monospace;
+        padding: 0;
+        margin: 0 0 0.5rem 0;
+        font-size: 20px;
+      "
+    >
+      {{ props.label }}
+    </p>
     <n-switch :value="value" ref="switch" size="large">
       <template #checked-icon> 1 </template>
       <template #unchecked-icon> 0 </template>
@@ -42,12 +48,12 @@ const updateCheck = (value: boolean) => {
         margin: 1rem 0 0 0;
         padding: 0;
         text-align: center;
-        font-size: 20px;
-        font-weight: bold;
+        font-size: 16px;
+        opacity: 0.6;
         text-transform: uppercase;
       "
     >
-      <strong>{{ props.keySwitch }}</strong>
+      {{ props.keySwitch }}
     </p>
   </n-card>
 </template>
