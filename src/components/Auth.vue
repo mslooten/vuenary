@@ -8,11 +8,8 @@ const email = ref("");
 const handleLogin = async () => {
   try {
     loading.value = true;
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.value,
-      options: {
-        emailRedirectTo: "https://mslooten.github.io/vuenary/",
-      },
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "github",
     });
     if (error) throw error;
     alert("Check your email for the login link!");
