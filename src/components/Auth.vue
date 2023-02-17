@@ -10,6 +10,9 @@ const handleLogin = async () => {
     loading.value = true;
     const { error } = await supabase.auth.signInWithOtp({
       email: email.value,
+      options: {
+        emailRedirectTo: "https://mslooten.github.io/vuenary/",
+      },
     });
     if (error) throw error;
     alert("Check your email for the login link!");
