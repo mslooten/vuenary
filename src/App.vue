@@ -5,8 +5,24 @@ import {
   NGradientText,
   useOsTheme,
 } from "naive-ui";
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
+import Auth from "./components/Auth.vue";
 import SwitchPanel from "./components/SwitchPanel.vue";
+import { supabase } from "./supabase";
+
+const session = ref();
+
+onMounted(async () => {
+  await supabase.auth.getSession().then(({ data }) => {
+    session.value = data.session;
+  });
+
+  supabase.auth.onAuthStateChange((_, _session) => {
+    session.value = _session;
+  });
+
+  getScore();
+});
 
 // Make sure Naive UI switches darkmode
 const osThemeRef = useOsTheme();
@@ -19,30 +35,50 @@ const points = ref(0);
 const question = ref(1);
 
 // Methods
-const newBinary = (complexity: number, randomize: boolean): void => {
-  const random = Math.floor(Math.random() * 255) + 1;
-  const inBinary = random.toString(2);
-  if (
-    complexity >= 6 ||
-    checkComplexity(inBinary) === complexity ||
-    randomize
-  ) {
-    question.value = random;
-  } else {
-    return newBinary(complexity, randomize);
-  }
-};
-
-const checkComplexity = (binaryArr: string): number => {
-  const length = binaryArr.split("").filter((val) => val === "1").length; // between 0 and 8
-  return 7 - Math.abs(6 - length); // Between 1 and 7
+const newBinary = (): void => {
+  question.value = Math.floor(Math.random() * 254) + 1;
 };
 
 const newRound = () => {
-  newBinary(Math.round(points.value / 2) + 1, Math.random() >= 0.5);
+  newBinary();
   points.value++;
+  updateScore(points.value);
   currentValue.value = 0;
 };
+
+async function getScore() {
+  try {
+    const { user } = session.value;
+    const { data, error } = await supabase
+      .from("highscores")
+      .select("score")
+      .eq("user_id", user?.id);
+    if (error) throw error;
+    points.value = parseInt(data[0].score) || 0;
+  } catch (err) {
+    console.log(err);
+  }
+  if (points.value > 0) {
+    newBinary();
+  }
+}
+
+async function updateScore(score: number) {
+  try {
+    const { user } = session.value;
+
+    const updates = {
+      user_id: user.id,
+      score: score,
+    };
+
+    let { error } = await supabase.from("highscores").upsert(updates);
+
+    if (error) throw error;
+  } catch (err) {
+    console.log(err);
+  }
+}
 
 const updateAnswer = (value: any) => {
   currentValue.value = value;
@@ -57,7 +93,8 @@ watch(currentValue, () => {
 </script>
 <template>
   <n-config-provider :theme="theme">
-    <div class="wrapper">
+    <div class="wrapper" v-if="session" :session="session">
+      <p>Welcome {{ session?.user?.email }}</p>
       <h1>
         <n-gradient-text :size="48" type="success"> Vuenary </n-gradient-text>
       </h1>
@@ -68,8 +105,11 @@ watch(currentValue, () => {
       <p style="font-family: monospace; font-size: 20px">
         {{ displayValue }}
       </p>
-      <SwitchPanel @answerUpdate="updateAnswer" :question="question" /></div
-  ></n-config-provider>
+      <SwitchPanel @answerUpdate="updateAnswer" :question="question" />
+    </div>
+
+    <Auth v-else
+  /></n-config-provider>
 </template>
 <style>
 .wrapper {
